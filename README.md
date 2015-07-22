@@ -14,6 +14,6 @@ Planning to use the following library for functional/UI support:
 Any suggestions to improve the website in terms of perfomance / UX / UI / functionalities is highly appreciated. 
 
 ### Development Team:
-||==+ Ashwin +==  || ==+ Ganesh +== || ==+ RajPrabhu +== ||
+||==+ Ashwin +==  || ==+ Ganesh +== || ==+ RajPrabhu +== || 
 
  
