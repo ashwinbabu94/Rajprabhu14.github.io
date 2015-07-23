@@ -1,12 +1,21 @@
+/** Prototype Extension **/
 
+// circle contains method
+google.maps.Circle.prototype.contains = function (latLng) {
+    return this.getBounds().contains(latLng) && google.maps.geometry.spherical.computeDistanceBetween(this.getCenter(), latLng) <= this.getRadius();
+}
+
+
+
+
+
+/** Event Listener    **/
 $(document).ready(function () {
-    google.maps.event.addDomListener(window, 'load', app.Base._initialize);
-    
+    google.maps.event.addDomListener(window, 'load', app.Base._initialize);    
 });
 
 
 var app = app || {}; //Main Application Object
-
 app.NearBy = {};  //Search Nearby Object
 app.Base = {};    //Base Object
  
@@ -26,6 +35,8 @@ app.Base._initialize = function initialize() {
 
     app.Base.map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
     app.CommonUtils._initializeElements();
+    app.NearBy._initializeElement();
+
 
     app.Base._PlaceSearchHandler.process();
 
