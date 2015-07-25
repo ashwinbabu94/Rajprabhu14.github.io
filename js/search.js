@@ -133,7 +133,7 @@ app.NearBy.PlacesResultsMarkerAddHandler = function (placeObject) {
     }); //creating new marker object
 
     marker.setIcon(({
-        url: "/Rajprabhu14.github.io/assets/images/markers/" + app.NearBy.iconSync[app.NearBy.category] + ".png",
+        url: "/assets/images/markers/" + app.NearBy.iconSync[app.NearBy.category] + ".png",
         size: new google.maps.Size(71, 71),
         origin: new google.maps.Point(0, 0),
         anchor: new google.maps.Point(17, 34),
