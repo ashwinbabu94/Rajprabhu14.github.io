@@ -5,12 +5,14 @@ $("#searchButton").on("click", function (e) { app.NearBy.onClickHandler(); });
 
 
 app.NearBy._initializeElement = function () {
-    app.NearBy.PlacesService = new google.maps.places.PlacesService(app.Base.map);    
+    app.NearBy.PlacesService = new google.maps.places.PlacesService(app.Base.map);
+    app.NearBy.DistanceMatrixService = new google.maps.DistanceMatrixService();
+    app.NearBy.DirectionsService = new google.maps.DirectionsService();
+    app.NearBy.DirectionsRenderer = new google.maps.DirectionsRenderer();
 }
 
 
-/** 1.0 onClick Handler **/
-
+/** 1.0 onClick Handler. **/
 app.NearBy.onClickHandler = function () {
 
     // * Gathering info & pre-process executables    
@@ -48,10 +50,12 @@ app.NearBy.onClickHandler = function () {
 
     // * setting map to center
     app.Base.map.setCenter(new google.maps.LatLng(app.NearBy.latitude, app.NearBy.longitude));
-    app.Base.map.fitBounds(app.NearBy.circleOverlayObj.getBounds())
+    app.Base.map.fitBounds(app.NearBy.circleOverlayObj.getBounds());
 
 }
 
+
+// 1.1 Places Reauest Object & config Options.
 app.NearBy.PlacesRequestHandler = function (arr) {
 
     var request = {};
@@ -66,11 +70,16 @@ app.NearBy.PlacesRequestHandler = function (arr) {
     app.NearBy.PlacesService.textSearch(request, app.NearBy.PlacesCallbackHandler);
 }
 
+// 1.2 Request Callback Handler & Status Handler
 app.NearBy.PlacesCallbackHandler = function (results, status) {
 
     switch (status) {
         case "OK":
             app.NearBy.PlacesResultsDisplayHandler(results);
+
+            // * Distance Matrix Calculation
+            app.NearBy.DistanceMatrixRequestHandler(app.NearBy.MarkersArray);
+
             break;
 
         case "ERROR":
@@ -99,42 +108,144 @@ app.NearBy.PlacesCallbackHandler = function (results, status) {
     }
 }
 
+// 1.3 Result Display & Marker Array set Handler
 app.NearBy.PlacesResultsDisplayHandler = function (Results) {
 
     app.NearBy.MarkerRemoveHandler(app.NearBy.MarkersArray); // clearing all the overlays before adding new batch.
     app.NearBy.MarkersArray = [];
+    app.NearBy.PlacesArray = [];
+
+    app.NearBy.PlacesArray = Results;
 
     for (var i = 0; i < Results.length; i++) {
         if (app.NearBy.circleOverlayObj.contains(Results[i].geometry.location)) {
-          app.NearBy.PlacesResultsMarkerAddHandler(Results[i]);
+            app.NearBy.PlacesResultsMarkerAddHandler(Results[i]);
         }
     }
 }
 
+// 1.4 Icon setter & individual marker adder
 app.NearBy.PlacesResultsMarkerAddHandler = function (placeObject) {
-   
+
     var marker = new google.maps.Marker({
         map: app.Base.map,
         anchorPoint: new google.maps.Point(0, -29)
     }); //creating new marker object
 
     marker.setIcon(({
-        url: "/assets/images/markers/" + app.NearBy.iconSync[app.NearBy.category] + ".png",  
+        url: "/Rajprabhu14.github.io/assets/images/markers/" + app.NearBy.iconSync[app.NearBy.category] + ".png",
         size: new google.maps.Size(71, 71),
         origin: new google.maps.Point(0, 0),
         anchor: new google.maps.Point(17, 34),
         scaledSize: new google.maps.Size(35, 35)
     })); //setting corresponding icon
-   
+
 
     marker.setPosition(placeObject.geometry.location);
     marker.setVisible(true);
     app.NearBy.MarkersArray.push(marker);
+   
 
     google.maps.event.addListener(marker, 'click', app.NearBy.PlacesResultsMarkerclickHandler);
-    google.maps.event.addListener(marker, 'mouseover', app.NearBy.PlacesResultsMarkerHoverHandler);
+
 
 }
+
+
+// 1.5 Distance Matrix Calculation - Request Object Handler
+app.NearBy.DistanceMatrixRequestHandler = function (MarkersArray) {
+
+
+    //Creating Origin & Destination arrays
+    var origins = [ new google.maps.LatLng(app.NearBy.latitude, app.NearBy.longitude) ];
+    var destinations = app.NearBy.DistanceMatrixDestinationsHandler(MarkersArray);
+
+    // Distance Matrix Request Object.
+    var Request = {};
+    Request.avoidFerries = true;
+    Request.avoidHighways = false;
+    Request.avoidTolls = false;
+    Request.travelMode = google.maps.TravelMode.DRIVING;
+    Request.unitSystem = google.maps.UnitSystem.METRIC;
+    Request.origins = origins;
+    Request.destinations = destinations;
+
+    app.NearBy.DistanceMatrixService.getDistanceMatrix(Request, app.NearBy.DistanceMatrixCallBackHandler);
+
+}
+
+// 1.6 Distance Matrix Calculation - CallBack Handler
+app.NearBy.DistanceMatrixCallBackHandler = function (response, status) {
+    if (status == "OK") {
+        var distArray = [];
+        for (var i = 0; i < response.rows[0].elements.length; i++) { distArray.push(parseFloat(response.rows[0].elements[i].distance.text.slice(0, -2))); }
+        var shortest = Math.min.apply(Math, distArray);
+        shortest = shortest + " km";
+
+        var ResObj = JSLINQ(response.rows[0].elements).Where(function (item) { return item.distance.text == shortest; });
+        var ResObjIndex = response.rows[0].elements.indexOf(ResObj.items[0]);
+
+        app.NearBy.MarkersInfoWinAndRouteHandler(app.NearBy.PlacesArray[ResObjIndex], ResObjIndex);
+    }
+}
+
+// 1.7 Distance Matrix Calculation - Destination Array Creator
+app.NearBy.DistanceMatrixDestinationsHandler = function (MarkersArray) {
+
+    var result = [];
+
+    for (var i = 0; i < MarkersArray.length; i++) {
+        result.push(MarkersArray[i].getPosition());
+    }
+
+    return result;
+}
+
+
+// 1.8 OnClick Handler for Markers - Info-Window popup & Directions
+app.NearBy.MarkersInfoWinAndRouteHandler = function (PlaceObj, index) {
+
+    //Infowindow-Popup
+    app.NearBy.PlacesService.getDetails(PlaceObj, function (result, status) {
+        if (status != google.maps.places.PlacesServiceStatus.OK) {
+            alert(status);
+            return;
+        }
+
+        var address = app.CommonUtils._getAddressComponentForPlace(result);
+        app.CommonUtils.infowindow.setContent('<div style="color: darkblue;"><strong>' + result.name + '</strong><br>' + address + "</div>");
+        app.CommonUtils.infowindow.open(app.Base.map, app.NearBy.MarkersArray[index]);
+    });
+
+
+    //Routing - Task
+
+    // Directions Request Object Config
+    var Request = {};
+    Request.origin = new google.maps.LatLng(app.NearBy.latitude, app.NearBy.longitude);
+    Request.destination = PlaceObj.geometry.location;
+    Request.travelMode = google.maps.TravelMode.DRIVING;
+
+    app.NearBy.DirectionsRenderer.setMap(app.Base.map);
+    //app.NearBy.DirectionsRenderer.setPanel(document.getElementById('directions-panel'));
+
+    app.NearBy.DirectionsService.route(Request, function (result, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+            app.NearBy.DirectionsRenderer.setDirections(result);
+        }
+    });
+}
+
+
+// 1.9 OnClick Handler for Markers
+app.NearBy.PlacesResultsMarkerclickHandler = function (e) {
+
+    var indexRes = JSLINQ(app.NearBy.MarkersArray).Where(function (item) { return item.internalPosition == e.latLng; });
+    var index = app.NearBy.MarkersArray.indexOf(indexRes.items[0]);
+
+    app.NearBy.MarkersInfoWinAndRouteHandler(app.NearBy.PlacesArray[index], index);
+}
+
 
 
 app.NearBy.MarkerRemoveHandler = function (MarkersArray) {
@@ -146,15 +257,6 @@ app.NearBy.MarkerRemoveHandler = function (MarkersArray) {
     }
 
 }
-
-app.NearBy.PlacesResultsMarkerclickHandler = function (e) {
-    console.log(e);
-}
-
-app.NearBy.PlacesResultsMarkerHoverHandler = function (e) {
-    console.log(e);
-}
-
 
 /** validation handler for user input   **/
 
@@ -174,8 +276,7 @@ app.NearBy.Validation = function (arr) {
 
 
 /** synchronization of given places type with the places_type of google places api
-    Reference: (https://developers.google.com/places/supported_types)
-
+    Reference: (https://developers.google.com/places/supported_types).
     placesTypeSync object is used in syncing the places type in the Radar Search request object.
 
 **/
@@ -189,6 +290,7 @@ app.NearBy.placesTypeSync = {
         "Restaurant":"restaurant"
 }
 
+// Icons Sync.
 app.NearBy.iconSync = {
 
     "ATM": "atm",
