@@ -3,12 +3,13 @@
 $("#searchButton").on("click", function (e) { app.NearBy.onClickHandler(); });
 
 
-
+// Initializing necessary Google Map's API Objects for later consumption.
 app.NearBy._initializeElement = function () {
     app.NearBy.PlacesService = new google.maps.places.PlacesService(app.Base.map);
     app.NearBy.DistanceMatrixService = new google.maps.DistanceMatrixService();
     app.NearBy.DirectionsService = new google.maps.DirectionsService();
     app.NearBy.DirectionsRenderer = new google.maps.DirectionsRenderer();
+    app.NearBy.DirectionsRenderer.setPanel(document.getElementById('DirectionsPanel'));
 }
 
 
@@ -236,7 +237,6 @@ app.NearBy.MarkersInfoWinAndRouteHandler = function (PlaceObj, index) {
     });
 }
 
-
 // 1.9 OnClick Handler for Markers
 app.NearBy.PlacesResultsMarkerclickHandler = function (e) {
 
@@ -246,8 +246,7 @@ app.NearBy.PlacesResultsMarkerclickHandler = function (e) {
     app.NearBy.MarkersInfoWinAndRouteHandler(app.NearBy.PlacesArray[index], index);
 }
 
-
-
+// 1.10 Marker Remover Handler
 app.NearBy.MarkerRemoveHandler = function (MarkersArray) {
 
     if (MarkersArray !== undefined) {
@@ -258,9 +257,9 @@ app.NearBy.MarkerRemoveHandler = function (MarkersArray) {
 
 }
 
-/** validation handler for user input   **/
 
-app.NearBy.Validation = function (arr) {
+// 1.11 validation for the user input 
+ app.NearBy.Validation = function (arr) {
 
     var decimal = /^\d+\.\d{0,10}$/;  // regEx test for decimal upto 10 decimal places
     var number = /^-?\d+\.?\d*$/;     // regEx for signed numbers + float as well
@@ -280,7 +279,6 @@ app.NearBy.Validation = function (arr) {
     placesTypeSync object is used in syncing the places type in the Radar Search request object.
 
 **/
-
 app.NearBy.placesTypeSync = {
 
         "ATM":"atm",
