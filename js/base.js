@@ -25,7 +25,7 @@ app.Base = {};    //Base Object
 app.Base._initialize = function initialize() {
 
     /* position Chennai */
-    var latlng = new google.maps.LatLng(13.0827, 80.2707);
+    var latlng = new google.maps.LatLng(pos);
 
     var mapOptions = {
         center: latlng,
