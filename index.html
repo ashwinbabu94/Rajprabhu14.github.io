@@ -108,7 +108,7 @@
             </div>
         </div>
     </div>
-    var infoWindow = new google.maps.InfoWindow({map: map});
+    var infoWindow = new google.maps.InfoWindow({map: mapOptions});
     if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
       var pos = {
